@@ -23,11 +23,32 @@ free on GitHub Pages.
 
 ```
 anime-op-ranker/
-├── index.html   # markup for the 3 screens (start / game / results)
+├── index.html   # markup for all screens (start / rank / results / bracket / bracket results)
 ├── style.css    # dark theme styling
-├── app.js       # API fetching + game state machine
+├── app.js       # API fetching + game state machines
 └── README.md
 ```
+
+## Game setup options
+
+- **Game mode** — *Tier ranking* is the original mode: place each theme
+  into a numbered slot as it plays. *Bracket tournament* always uses 8
+  themes and runs a single-elimination bracket instead (Quarterfinal →
+  Semifinal → Final) — both openings play muted side by side, tap
+  "Listen" to swap audio between them, then pick a winner to advance it.
+- **Theme type** — Openings, Endings, or both.
+- **Selection** — *Random* pulls from AnimeThemes' whole catalog.
+  *Top of the charts* instead draws from a curated list of well-known,
+  popular anime baked into `app.js` (`POPULAR_ANIME`) and looks each one
+  up by name, so you get recognizable openings instead of a total wildcard.
+  Edit that array to change what counts as "the charts."
+- **Video quality** — *Lower (480p)* asks for the smallest available
+  encode of each clip, which loads noticeably faster on a slow
+  connection than the default high-res WebMs. *Auto* uses whatever
+  resolution AnimeThemes returns first.
+
+The video player now has native controls, so you can pause/scrub/adjust
+volume mid-clip instead of it just autoplaying at you.
 
 ## Running it locally
 
@@ -73,6 +94,17 @@ API — no local file access needed.)
 - Once every slot is filled, you get a results screen with a copyable
   text list of your final ranking.
 
+## Known limitation: "Top of the charts" lookups
+
+This mode searches AnimeThemes by anime name (`filter[name]=`) for each
+title in `POPULAR_ANIME`, one at a time, and skips any that don't
+resolve to a match with a usable video. If AnimeThemes' name search is
+strict about exact titles, a handful of entries may quietly fail to
+resolve — you'll just get slightly fewer than requested rather than an
+error. If you notice a favorite consistently missing, try adjusting how
+it's spelled in the array (e.g. matching AnimeThemes' own slug/title
+formatting) rather than assuming it's not in their catalog.
+
 ## Ideas for later (not implemented, to keep v1 shippable in a day)
 
 - **Swap-to-reorder**: clicking an already-filled slot could bump that
@@ -84,6 +116,9 @@ API — no local file access needed.)
   build a running all-time ranking across sessions.
 - **Share card**: render the final ranking as an image (canvas) instead
   of just text, for easier sharing.
+- **Bigger brackets**: 16 or 32-entry tournaments, or letting bracket
+  mode pull from "Top of the charts" pool sizes larger than the current
+  8-only fixed size.
 
 ## API reference
 

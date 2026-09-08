@@ -288,3 +288,103 @@ select {
   .game-layout { flex-direction: column; }
   #rank-rail { width: 100%; }
 }
+
+/* ---------- bracket screen ---------- */
+.bracket-layout {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.bracket-round-line {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-bottom: 18px;
+}
+
+.bracket-matchup {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: center;
+}
+
+.bracket-side {
+  flex: 1;
+  max-width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.video-wrap.small {
+  aspect-ratio: 16 / 9;
+}
+
+.bracket-name {
+  margin: 12px 0 10px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  min-height: 2.4em;
+}
+
+.small-btn {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.bracket-side .primary-btn {
+  width: 100%;
+  margin-top: 0;
+}
+
+.bracket-vs {
+  flex-shrink: 0;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: var(--accent);
+}
+
+.bracket-champion-name {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin: 8px 0 24px;
+}
+
+#bracket-history {
+  margin-bottom: 24px;
+}
+
+.bracket-round-block {
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.bracket-round-block h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin: 0 0 6px;
+}
+
+.bracket-round-block ul {
+  margin: 0;
+  padding: 0 0 0 18px;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .bracket-matchup { flex-direction: column; }
+  .bracket-vs { padding: 4px 0; }
+}

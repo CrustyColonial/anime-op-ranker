@@ -15,6 +15,14 @@
       <p class="subtitle">Watch a random opening. Rank it. Repeat until they're all placed.</p>
 
       <div class="setting-row">
+        <label for="mode-select">Game mode</label>
+        <select id="mode-select">
+          <option value="ranking" selected>Tier ranking</option>
+          <option value="bracket">Bracket tournament (8)</option>
+        </select>
+      </div>
+
+      <div class="setting-row" id="count-row">
         <label for="count-select">How many themes?</label>
         <select id="count-select">
           <option value="5">5</option>
@@ -30,6 +38,22 @@
           <option value="OP" selected>Openings only</option>
           <option value="ED">Endings only</option>
           <option value="OP,ED">Openings + Endings</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="source-select">Selection</label>
+        <select id="source-select">
+          <option value="random" selected>Random</option>
+          <option value="top">Top of the charts</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="quality-select">Video quality</label>
+        <select id="quality-select">
+          <option value="low" selected>Lower (480p, faster)</option>
+          <option value="auto">Auto (best available)</option>
         </select>
       </div>
 
@@ -52,7 +76,7 @@
       <!-- right: video player -->
       <main id="player-area">
         <div class="video-wrap">
-          <video id="player" playsinline autoplay></video>
+          <video id="player" playsinline autoplay controls></video>
           <div id="video-overlay" class="video-overlay hidden">
             <p id="video-overlay-text">Loading…</p>
           </div>
@@ -73,6 +97,50 @@
       <div class="results-actions">
         <button id="copy-btn" class="secondary-btn">Copy as text</button>
         <button id="restart-btn" class="primary-btn">Rank another set</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BRACKET SCREEN ===================== -->
+  <section id="bracket-screen" class="screen hidden">
+    <div class="bracket-layout">
+      <p id="bracket-round-line" class="bracket-round-line">Quarterfinal 1 of 4</p>
+      <div class="bracket-matchup">
+
+        <div class="bracket-side">
+          <div class="video-wrap small">
+            <video id="bracket-video-a" playsinline autoplay loop muted controls></video>
+          </div>
+          <p id="bracket-name-a" class="bracket-name">—</p>
+          <button id="bracket-unmute-a" class="secondary-btn small-btn">🔊 Listen</button>
+          <button id="bracket-choose-a" class="primary-btn">Choose this one</button>
+        </div>
+
+        <div class="bracket-vs">VS</div>
+
+        <div class="bracket-side">
+          <div class="video-wrap small">
+            <video id="bracket-video-b" playsinline autoplay loop muted controls></video>
+          </div>
+          <p id="bracket-name-b" class="bracket-name">—</p>
+          <button id="bracket-unmute-b" class="secondary-btn small-btn">🔊 Listen</button>
+          <button id="bracket-choose-b" class="primary-btn">Choose this one</button>
+        </div>
+
+      </div>
+      <p class="hint">Only one side plays audio at a time — tap "Listen" to switch. Pick a winner to advance it to the next round.</p>
+    </div>
+  </section>
+
+  <!-- ===================== BRACKET RESULTS SCREEN ===================== -->
+  <section id="bracket-results-screen" class="screen hidden">
+    <div class="results-card">
+      <h1>🏆 Champion</h1>
+      <p id="bracket-champion-name" class="bracket-champion-name"></p>
+      <div id="bracket-history"></div>
+      <div class="results-actions">
+        <button id="bracket-copy-btn" class="secondary-btn">Copy as text</button>
+        <button id="bracket-restart-btn" class="primary-btn">Run another bracket</button>
       </div>
     </div>
   </section>
