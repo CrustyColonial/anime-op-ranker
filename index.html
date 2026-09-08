@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anime Opening Tier Ranker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===================== START SCREEN ===================== -->
+  <section id="start-screen" class="screen">
+    <div class="start-card">
+      <h1>Anime Opening<br>Tier Ranker</h1>
+      <p class="subtitle">Watch a random opening. Rank it. Repeat until they're all placed.</p>
+
+      <div class="setting-row">
+        <label for="count-select">How many themes?</label>
+        <select id="count-select">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="type-select">Theme type</label>
+        <select id="type-select">
+          <option value="OP" selected>Openings only</option>
+          <option value="ED">Endings only</option>
+          <option value="OP,ED">Openings + Endings</option>
+        </select>
+      </div>
+
+      <button id="start-btn" class="primary-btn">Start</button>
+
+      <p id="start-status" class="status-line"></p>
+    </div>
+  </section>
+
+  <!-- ===================== GAME SCREEN ===================== -->
+  <section id="game-screen" class="screen hidden">
+    <div class="game-layout">
+
+      <!-- left rail: numbered rank slots -->
+      <aside id="rank-rail">
+        <h2>Rankings</h2>
+        <ol id="rank-list"><!-- rank buttons injected here --></ol>
+      </aside>
+
+      <!-- right: video player -->
+      <main id="player-area">
+        <div class="video-wrap">
+          <video id="player" playsinline autoplay></video>
+          <div id="video-overlay" class="video-overlay hidden">
+            <p id="video-overlay-text">Loading…</p>
+          </div>
+        </div>
+        <p id="progress-line">Theme 1 of 10</p>
+        <p class="hint">Click a rank slot on the left to place this opening. A new one will load immediately after.</p>
+        <button id="skip-btn" class="secondary-btn">Skip this one (send to back of queue)</button>
+      </main>
+
+    </div>
+  </section>
+
+  <!-- ===================== RESULTS SCREEN ===================== -->
+  <section id="results-screen" class="screen hidden">
+    <div class="results-card">
+      <h1>Your Ranking</h1>
+      <ol id="results-list"></ol>
+      <div class="results-actions">
+        <button id="copy-btn" class="secondary-btn">Copy as text</button>
+        <button id="restart-btn" class="primary-btn">Rank another set</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
