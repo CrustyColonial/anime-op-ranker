@@ -12,43 +12,9 @@ const API_BASE = "https://api.animethemes.moe";
 
 const FETCH_MULTIPLIER = 3;
 const MAX_FETCH_ATTEMPTS = 4;
+const RECENT_MAX_FETCH_ATTEMPTS = 8; // recent-year matches are a smaller slice, so try harder
 const LOW_RES_TARGET = 480;
-
-const POPULAR_ANIME = [
-  "Fullmetal Alchemist: Brotherhood",
-  "Attack on Titan",
-  "Death Note",
-  "Naruto",
-  "One Piece",
-  "Demon Slayer: Kimetsu no Yaiba",
-  "My Hero Academia",
-  "Jujutsu Kaisen",
-  "Cowboy Bebop",
-  "Steins;Gate",
-  "Hunter x Hunter (2011)",
-  "Code Geass: Lelouch of the Rebellion",
-  "One Punch Man",
-  "Tokyo Ghoul",
-  "Bleach",
-  "Dragon Ball Z",
-  "Neon Genesis Evangelion",
-  "Mob Psycho 100",
-  "Vinland Saga",
-  "Chainsaw Man",
-  "Spy x Family",
-  "Violet Evergarden",
-  "Re:ZERO -Starting Life in Another World-",
-  "Made in Abyss",
-  "The Promised Neverland",
-  "Haikyu!!",
-  "Fruits Basket",
-  "Your Lie in April",
-  "Sword Art Online",
-  "Toradora!",
-  "Fate/Zero",
-  "Black Clover",
-  "Assassination Classroom",
-];
+const RECENT_YEARS_BACK = 8; // "recent" = anime from this many years back through now
 
 // ---------------------------------------------------------------------
 // State
@@ -81,11 +47,16 @@ const els = {
   modeSelect: document.getElementById("mode-select"),
   countRow: document.getElementById("count-row"),
   countSelect: document.getElementById("count-select"),
+  bracketSizeRow: document.getElementById("bracket-size-row"),
+  bracketSizeSelect: document.getElementById("bracket-size-select"),
   typeSelect: document.getElementById("type-select"),
   sourceSelect: document.getElementById("source-select"),
   qualitySelect: document.getElementById("quality-select"),
   startBtn: document.getElementById("start-btn"),
   startStatus: document.getElementById("start-status"),
+
+  pcModeToggle: document.getElementById("pc-mode-toggle"),
+  sizeSlider: document.getElementById("size-slider"),
 
   rankList: document.getElementById("rank-list"),
   player: document.getElementById("player"),
@@ -99,12 +70,14 @@ const els = {
   restartBtn: document.getElementById("restart-btn"),
 
   bracketRoundLine: document.getElementById("bracket-round-line"),
+  wrapA: document.getElementById("bracket-wrap-a"),
+  wrapB: document.getElementById("bracket-wrap-b"),
   videoA: document.getElementById("bracket-video-a"),
   videoB: document.getElementById("bracket-video-b"),
+  playA: document.getElementById("bracket-play-a"),
+  playB: document.getElementById("bracket-play-b"),
   nameA: document.getElementById("bracket-name-a"),
   nameB: document.getElementById("bracket-name-b"),
-  unmuteA: document.getElementById("bracket-unmute-a"),
-  unmuteB: document.getElementById("bracket-unmute-b"),
   chooseA: document.getElementById("bracket-choose-a"),
   chooseB: document.getElementById("bracket-choose-b"),
 
@@ -115,12 +88,67 @@ const els = {
 };
 
 // ---------------------------------------------------------------------
-// Mode toggle (hide theme-count when running a fixed-size bracket)
+// Mode toggle (theme-count vs. fixed bracket size)
 // ---------------------------------------------------------------------
 els.modeSelect.addEventListener("change", () => {
   const isBracket = els.modeSelect.value === "bracket";
   els.countRow.classList.toggle("hidden", isBracket);
+  els.bracketSizeRow.classList.toggle("hidden", !isBracket);
 });
+
+// ---------------------------------------------------------------------
+// UI settings: PC mode + embed size slider (persisted to localStorage)
+// ---------------------------------------------------------------------
+const UI_PREFS_KEY = "anime-op-ranker-ui-prefs";
+
+function loadUiPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(UI_PREFS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveUiPrefs(prefs) {
+  try {
+    localStorage.setItem(UI_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // localStorage unavailable (private browsing etc.) -- not critical, just skip persisting
+  }
+}
+
+function applyEmbedScale(value) {
+  document.documentElement.style.setProperty("--embed-scale", value);
+}
+
+function initUiPrefs() {
+  const prefs = loadUiPrefs();
+
+  if (prefs.pcMode) {
+    document.body.classList.add("pc-mode");
+    els.pcModeToggle.checked = true;
+  }
+  const scale = prefs.embedScale || 1;
+  els.sizeSlider.value = scale;
+  applyEmbedScale(scale);
+}
+
+els.pcModeToggle.addEventListener("change", () => {
+  const prefs = loadUiPrefs();
+  prefs.pcMode = els.pcModeToggle.checked;
+  document.body.classList.toggle("pc-mode", prefs.pcMode);
+  saveUiPrefs(prefs);
+});
+
+els.sizeSlider.addEventListener("input", () => {
+  const value = els.sizeSlider.value;
+  applyEmbedScale(value);
+  const prefs = loadUiPrefs();
+  prefs.embedScale = value;
+  saveUiPrefs(prefs);
+});
+
+initUiPrefs();
 
 // ---------------------------------------------------------------------
 // Video quality helper
@@ -152,9 +180,9 @@ function pickVideoLink(entries, preferLowRes) {
 }
 
 // ---------------------------------------------------------------------
-// API -- random selection
+// API -- theme fetching (random pool, optionally restricted to recent years)
 // ---------------------------------------------------------------------
-function buildThemeUrl({ typeFilter, pageSize }) {
+function buildThemeUrl({ typeFilter, pageSize, yearFilter }) {
   const params = [
     "include=anime,song,animethemeentries.videos",
     "filter[has]=animethemeentries.videos",
@@ -164,11 +192,16 @@ function buildThemeUrl({ typeFilter, pageSize }) {
   if (typeFilter) {
     params.push(`filter[type]=${encodeURIComponent(typeFilter)}`);
   }
+  if (yearFilter && yearFilter.length > 0) {
+    // Ask the API to narrow by year too -- if it ignores this, the
+    // client-side filter below still enforces it correctly either way.
+    params.push(`filter[anime.year]=${yearFilter.join(",")}`);
+  }
   return `${API_BASE}/animetheme?${params.join("&")}`;
 }
 
-async function fetchThemeBatch(typeFilter, pageSize, preferLowRes) {
-  const url = buildThemeUrl({ typeFilter, pageSize });
+async function fetchThemeBatch(typeFilter, pageSize, preferLowRes, yearFilter) {
+  const url = buildThemeUrl({ typeFilter, pageSize, yearFilter });
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`AnimeThemes API returned ${res.status}`);
@@ -179,6 +212,9 @@ async function fetchThemeBatch(typeFilter, pageSize, preferLowRes) {
   const normalized = [];
   for (const theme of raw) {
     if (!theme.anime || !theme.anime.name) continue;
+    if (yearFilter && yearFilter.length > 0 && !yearFilter.includes(theme.anime.year)) {
+      continue; // belt-and-suspenders client-side check regardless of server support
+    }
     const videoUrl = pickVideoLink(theme.animethemeentries, preferLowRes);
     if (!videoUrl) continue;
 
@@ -186,6 +222,7 @@ async function fetchThemeBatch(typeFilter, pageSize, preferLowRes) {
       id: theme.id,
       animeId: theme.anime.id,
       animeName: theme.anime.name,
+      animeYear: theme.anime.year,
       songTitle: (theme.song && theme.song.title) || theme.slug,
       type: theme.type,
       videoUrl,
@@ -194,16 +231,16 @@ async function fetchThemeBatch(typeFilter, pageSize, preferLowRes) {
   return normalized;
 }
 
-async function fetchRandomThemes(count, typeFilter, preferLowRes) {
+async function fetchThemePool(count, typeFilter, preferLowRes, yearFilter, maxAttempts) {
   const collected = new Map();
   let attempts = 0;
 
-  while (collected.size < count && attempts < MAX_FETCH_ATTEMPTS) {
+  while (collected.size < count && attempts < maxAttempts) {
     attempts++;
     const pageSize = Math.min((count - collected.size) * FETCH_MULTIPLIER + 5, 100);
     let batch;
     try {
-      batch = await fetchThemeBatch(typeFilter, pageSize, preferLowRes);
+      batch = await fetchThemeBatch(typeFilter, pageSize, preferLowRes, yearFilter);
     } catch (err) {
       console.error("Fetch attempt failed:", err);
       continue;
@@ -221,68 +258,14 @@ async function fetchRandomThemes(count, typeFilter, preferLowRes) {
   return themes.slice(0, count);
 }
 
-// ---------------------------------------------------------------------
-// API -- "top of the charts" selection (curated pool, looked up by name)
-// ---------------------------------------------------------------------
-async function fetchThemesForAnimeName(name, typeFilter, preferLowRes) {
-  const params = [
-    `filter[name]=${encodeURIComponent(name)}`,
-    "include=animethemes.song,animethemes.animethemeentries.videos",
-    "page[size]=1",
-  ];
-  const url = `${API_BASE}/anime?${params.join("&")}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-
-  const data = await res.json();
-  const anime = (data.anime || [])[0];
-  if (!anime) return null;
-
-  const wantedTypes = typeFilter ? typeFilter.split(",") : null;
-  let themes = anime.animethemes || [];
-  if (wantedTypes) {
-    themes = themes.filter((t) => wantedTypes.includes(t.type));
-  }
-  if (themes.length === 0) return null;
-
-  shuffle(themes);
-  for (const theme of themes) {
-    const videoUrl = pickVideoLink(theme.animethemeentries, preferLowRes);
-    if (videoUrl) {
-      return {
-        id: theme.id,
-        animeId: anime.id,
-        animeName: anime.name,
-        songTitle: (theme.song && theme.song.title) || theme.slug,
-        type: theme.type,
-        videoUrl,
-      };
-    }
-  }
-  return null;
-}
-
-async function fetchTopChartsThemes(count, typeFilter, preferLowRes) {
-  const pool = [...POPULAR_ANIME];
-  shuffle(pool);
-
-  const collected = [];
-  for (const name of pool) {
-    if (collected.length >= count) break;
-    try {
-      const theme = await fetchThemesForAnimeName(name, typeFilter, preferLowRes);
-      if (theme) collected.push(theme);
-    } catch (err) {
-      console.error(`Lookup failed for "${name}":`, err);
-    }
-  }
-  return collected;
-}
-
 function fetchRoundThemes(count, typeFilter, source, preferLowRes) {
-  return source === "top"
-    ? fetchTopChartsThemes(count, typeFilter, preferLowRes)
-    : fetchRandomThemes(count, typeFilter, preferLowRes);
+  if (source === "recent") {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= currentYear - RECENT_YEARS_BACK; y--) years.push(y);
+    return fetchThemePool(count, typeFilter, preferLowRes, years, RECENT_MAX_FETCH_ATTEMPTS);
+  }
+  return fetchThemePool(count, typeFilter, preferLowRes, null, MAX_FETCH_ATTEMPTS);
 }
 
 function shuffle(arr) {
@@ -311,23 +294,24 @@ els.startBtn.addEventListener("click", async () => {
   const typeFilter = els.typeSelect.value;
   const source = els.sourceSelect.value;
   const preferLowRes = els.qualitySelect.value === "low";
-  const count = mode === "bracket" ? 8 : parseInt(els.countSelect.value, 10);
+  const bracketSize = parseInt(els.bracketSizeSelect.value, 10);
+  const count = mode === "bracket" ? bracketSize : parseInt(els.countSelect.value, 10);
 
   els.startBtn.disabled = true;
   els.startStatus.textContent =
-    source === "top" ? "Looking up popular openings..." : "Fetching random openings...";
+    source === "recent" ? "Looking up recent openings…" : "Fetching random openings…";
 
   try {
     const themes = await fetchRoundThemes(count, typeFilter, source, preferLowRes);
 
     if (mode === "bracket") {
-      if (themes.length < 8) {
+      if (themes.length < bracketSize) {
         els.startStatus.textContent =
-          `Only found ${themes.length}/8 usable themes for a bracket -- try Random selection, or a broader theme type.`;
+          `Only found ${themes.length}/${bracketSize} usable themes for a bracket this size -- try a smaller bracket, Random selection, or a broader theme type.`;
         els.startBtn.disabled = false;
         return;
       }
-      beginBracket(themes.slice(0, 8));
+      beginBracket(themes.slice(0, bracketSize));
       return;
     }
 
@@ -489,6 +473,9 @@ els.restartBtn.addEventListener("click", () => {
 // =======================================================================
 // BRACKET TOURNAMENT MODE
 // =======================================================================
+// Only one side plays at a time: both videos load paused (play-overlay
+// button visible on each), and starting either one -- via its overlay
+// button or its own native controls -- pauses the other automatically.
 function pairUp(arr) {
   const pairs = [];
   for (let i = 0; i < arr.length; i += 2) {
@@ -498,10 +485,8 @@ function pairUp(arr) {
 }
 
 function roundNameFor(participantCount) {
-  if (participantCount === 8) return "Quarterfinal";
-  if (participantCount === 4) return "Semifinal";
-  if (participantCount === 2) return "Final";
-  return "Round";
+  const names = { 32: "Round of 32", 16: "Round of 16", 8: "Quarterfinal", 4: "Semifinal", 2: "Final" };
+  return names[participantCount] || "Round";
 }
 
 function beginBracket(themes) {
@@ -529,35 +514,38 @@ function renderBracketMatch() {
   const matchTotal = b.matches.length;
   els.bracketRoundLine.textContent = `${roundName} -- Match ${matchNum} of ${matchTotal}`;
 
-  setBracketSide(els.videoA, els.nameA, themeA);
-  setBracketSide(els.videoB, els.nameB, themeB);
-
-  els.videoA.muted = true;
-  els.videoB.muted = true;
+  setBracketSide(els.wrapA, els.videoA, els.nameA, themeA);
+  setBracketSide(els.wrapB, els.videoB, els.nameB, themeB);
 }
 
-function setBracketSide(videoEl, nameEl, theme) {
+function setBracketSide(wrapEl, videoEl, nameEl, theme) {
   nameEl.textContent = `${theme.animeName} -- ${theme.songTitle}`;
+  videoEl.pause();
   videoEl.src = theme.videoUrl;
   videoEl.loop = true;
-  videoEl.play().catch(() => {});
+  videoEl.muted = false;
+  wrapEl.classList.remove("is-playing"); // shows the paused/play-overlay state
 }
 
-function makeUnmuteHandler(activeVideo, otherVideo) {
-  return () => {
-    otherVideo.muted = true;
-    activeVideo.muted = false;
-  };
-}
-els.unmuteA.addEventListener("click", makeUnmuteHandler(els.videoA, els.videoB));
-els.unmuteB.addEventListener("click", makeUnmuteHandler(els.videoB, els.videoA));
-
-[els.videoA, els.videoB].forEach((video, i) => {
-  video.addEventListener("error", () => {
-    const nameEl = i === 0 ? els.nameA : els.nameB;
+function setupBracketVideo(wrapEl, videoEl, otherVideoGetter, nameEl) {
+  videoEl.addEventListener("play", () => {
+    wrapEl.classList.add("is-playing");
+    const other = otherVideoGetter();
+    if (other && !other.paused) other.pause();
+  });
+  videoEl.addEventListener("pause", () => {
+    wrapEl.classList.remove("is-playing");
+  });
+  videoEl.addEventListener("error", () => {
     nameEl.textContent += " (failed to load -- you can still pick the other side)";
   });
-});
+}
+
+setupBracketVideo(els.wrapA, els.videoA, () => els.videoB, els.nameA);
+setupBracketVideo(els.wrapB, els.videoB, () => els.videoA, els.nameB);
+
+els.playA.addEventListener("click", () => els.videoA.play().catch(() => {}));
+els.playB.addEventListener("click", () => els.videoB.play().catch(() => {}));
 
 function chooseBracketWinner(side) {
   const b = state.bracket;
@@ -566,7 +554,7 @@ function chooseBracketWinner(side) {
   const loser = side === "a" ? themeB : themeA;
 
   b.nextWinners.push(winner);
-  recordBracketResult(winner, loser);
+  recordBracketResult(winner, loser, b.participantCount);
 
   b.index++;
   if (b.index < b.matches.length) {
@@ -587,9 +575,9 @@ function chooseBracketWinner(side) {
   renderBracketMatch();
 }
 
-function recordBracketResult(winner, loser) {
+function recordBracketResult(winner, loser, participantCountAtMatchTime) {
   const b = state.bracket;
-  const roundName = roundNameFor(b.participantCount);
+  const roundName = roundNameFor(participantCountAtMatchTime);
   let block = b.history.find((h) => h.roundName === roundName);
   if (!block) {
     block = { roundName, results: [] };

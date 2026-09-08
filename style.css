@@ -7,6 +7,7 @@
   --text: #f2f2f5;
   --text-dim: #9a9aa5;
   --border: #2e2e3a;
+  --embed-scale: 1;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
@@ -20,6 +21,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-bottom: 36px; /* room for the fixed credit footer */
 }
 
 .hidden { display: none !important; }
@@ -65,6 +67,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
   text-align: left;
 }
@@ -81,6 +84,46 @@ select {
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 0.9rem;
+}
+
+/* toggle switch (checkbox styled as a pill) */
+.toggle-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.toggle-input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.toggle-input:checked {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+.toggle-input:checked::before {
+  transform: translateX(18px);
+  background: white;
+}
+
+/* embed-size slider */
+.slider-row input[type="range"] {
+  width: 140px;
+  accent-color: var(--accent);
 }
 
 .primary-btn {
@@ -210,9 +253,15 @@ select {
   min-width: 0;
 }
 
+/* video-wrap is used by both the ranking player and each bracket side --
+   sizing lives here so every embed (not just #player) is constrained
+   properly. The embed-size slider scales the max-width via --embed-scale;
+   PC mode raises the baseline it scales from (see further down). */
 .video-wrap {
   position: relative;
   width: 100%;
+  max-width: calc(900px * var(--embed-scale));
+  margin: 0 auto;
   aspect-ratio: 16 / 9;
   background: black;
   border-radius: 14px;
@@ -220,11 +269,12 @@ select {
   border: 1px solid var(--border);
 }
 
-#player {
+.video-wrap video {
   width: 100%;
   height: 100%;
   object-fit: contain;
   background: black;
+  display: block;
 }
 
 .video-overlay {
@@ -308,34 +358,55 @@ select {
 
 .bracket-matchup {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 20px;
   justify-content: center;
 }
 
 .bracket-side {
   flex: 1;
-  max-width: 420px;
+  min-width: 0;
+  max-width: calc(420px * var(--embed-scale));
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px;
 }
 
+/* .video-wrap.small inherits sizing from the shared .video-wrap rule
+   above -- it just needs the aspect ratio, since its parent
+   .bracket-side already caps the width. */
 .video-wrap.small {
-  aspect-ratio: 16 / 9;
+  max-width: 100%;
 }
+
+/* big centered play button shown over a paused bracket video;
+   hidden once that side's .video-wrap gets the is-playing class */
+.play-overlay {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(10, 10, 14, 0.7);
+  border: 2px solid var(--accent);
+  color: white;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0 0 0 4px; /* optically center the ▶ glyph */
+}
+.play-overlay:hover { background: rgba(10, 10, 14, 0.9); }
+.video-wrap.is-playing .play-overlay { display: none; }
 
 .bracket-name {
   margin: 12px 0 10px;
   font-weight: 600;
   font-size: 0.92rem;
   min-height: 2.4em;
-}
-
-.small-btn {
-  width: 100%;
-  margin-bottom: 8px;
 }
 
 .bracket-side .primary-btn {
@@ -345,6 +416,7 @@ select {
 
 .bracket-vs {
   flex-shrink: 0;
+  align-self: center;
   font-weight: 800;
   font-size: 1.4rem;
   color: var(--accent);
@@ -385,6 +457,33 @@ select {
 }
 
 @media (max-width: 720px) {
-  .bracket-matchup { flex-direction: column; }
+  .bracket-matchup { flex-direction: column; align-items: stretch; }
+  .bracket-side { max-width: 100%; }
   .bracket-vs { padding: 4px 0; }
 }
+
+/* ---------- PC mode: wider layout for large screens ---------- */
+body.pc-mode .game-layout { max-width: 1700px; }
+body.pc-mode #rank-rail { width: 340px; }
+body.pc-mode .video-wrap { max-width: calc(1300px * var(--embed-scale)); }
+body.pc-mode .bracket-layout { max-width: 1700px; }
+body.pc-mode .bracket-side { max-width: calc(620px * var(--embed-scale)); }
+
+/* ---------- credit footer ---------- */
+#credit-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  padding: 8px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  background: rgba(15, 15, 20, 0.7);
+  backdrop-filter: blur(4px);
+}
+#credit-footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+#credit-footer a:hover { text-decoration: underline; }

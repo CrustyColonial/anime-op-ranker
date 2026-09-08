@@ -18,7 +18,7 @@
         <label for="mode-select">Game mode</label>
         <select id="mode-select">
           <option value="ranking" selected>Tier ranking</option>
-          <option value="bracket">Bracket tournament (8)</option>
+          <option value="bracket">Bracket tournament</option>
         </select>
       </div>
 
@@ -29,6 +29,15 @@
           <option value="10" selected>10</option>
           <option value="15">15</option>
           <option value="20">20</option>
+        </select>
+      </div>
+
+      <div class="setting-row hidden" id="bracket-size-row">
+        <label for="bracket-size-select">Bracket size</label>
+        <select id="bracket-size-select">
+          <option value="8" selected>8</option>
+          <option value="16">16</option>
+          <option value="32">32</option>
         </select>
       </div>
 
@@ -45,7 +54,7 @@
         <label for="source-select">Selection</label>
         <select id="source-select">
           <option value="random" selected>Random</option>
-          <option value="top">Top of the charts</option>
+          <option value="recent">Recent only (last ~8 years)</option>
         </select>
       </div>
 
@@ -55,6 +64,16 @@
           <option value="low" selected>Lower (480p, faster)</option>
           <option value="auto">Auto (best available)</option>
         </select>
+      </div>
+
+      <div class="setting-row">
+        <label for="pc-mode-toggle">PC mode (wider layout)</label>
+        <input type="checkbox" id="pc-mode-toggle" class="toggle-input">
+      </div>
+
+      <div class="setting-row slider-row">
+        <label for="size-slider">Embed size</label>
+        <input type="range" id="size-slider" min="0.6" max="1.8" step="0.1" value="1">
       </div>
 
       <button id="start-btn" class="primary-btn">Start</button>
@@ -104,31 +123,31 @@
   <!-- ===================== BRACKET SCREEN ===================== -->
   <section id="bracket-screen" class="screen hidden">
     <div class="bracket-layout">
-      <p id="bracket-round-line" class="bracket-round-line">Quarterfinal 1 of 4</p>
+      <p id="bracket-round-line" class="bracket-round-line">Quarterfinal — Match 1 of 4</p>
       <div class="bracket-matchup">
 
         <div class="bracket-side">
-          <div class="video-wrap small">
-            <video id="bracket-video-a" playsinline autoplay loop muted controls></video>
+          <div class="video-wrap small" id="bracket-wrap-a">
+            <video id="bracket-video-a" playsinline controls loop></video>
+            <button id="bracket-play-a" class="play-overlay" aria-label="Play">▶</button>
           </div>
           <p id="bracket-name-a" class="bracket-name">—</p>
-          <button id="bracket-unmute-a" class="secondary-btn small-btn">🔊 Listen</button>
           <button id="bracket-choose-a" class="primary-btn">Choose this one</button>
         </div>
 
         <div class="bracket-vs">VS</div>
 
         <div class="bracket-side">
-          <div class="video-wrap small">
-            <video id="bracket-video-b" playsinline autoplay loop muted controls></video>
+          <div class="video-wrap small" id="bracket-wrap-b">
+            <video id="bracket-video-b" playsinline controls loop></video>
+            <button id="bracket-play-b" class="play-overlay" aria-label="Play">▶</button>
           </div>
           <p id="bracket-name-b" class="bracket-name">—</p>
-          <button id="bracket-unmute-b" class="secondary-btn small-btn">🔊 Listen</button>
           <button id="bracket-choose-b" class="primary-btn">Choose this one</button>
         </div>
 
       </div>
-      <p class="hint">Only one side plays audio at a time — tap "Listen" to switch. Pick a winner to advance it to the next round.</p>
+      <p class="hint">Both start paused. Play either side — starting one automatically pauses the other. Pick a winner to advance it to the next round.</p>
     </div>
   </section>
 
@@ -144,6 +163,10 @@
       </div>
     </div>
   </section>
+
+  <footer id="credit-footer">
+    Powered by <a href="https://animethemes.moe" target="_blank" rel="noopener">AnimeThemes.moe</a>
+  </footer>
 
   <script src="app.js"></script>
 </body>
